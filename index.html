@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Start Page</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__content">
+      <p class="hero__label">Personal Start Page</p>
+      <h1>よく使うリンク</h1>
+      <p class="hero__description">スマホのホーム画面のように、毎日使うページへすぐアクセスできます。</p>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="search-panel" aria-labelledby="search-title">
+      <h2 id="search-title">リンクを検索</h2>
+      <label class="search-panel__label" for="searchInput">リンク名で絞り込む</label>
+      <input
+        id="searchInput"
+        class="search-panel__input"
+        type="search"
+        placeholder="例: ChatGPT、Google、銀行"
+        autocomplete="off"
+      >
+    </section>
+
+    <p id="emptyMessage" class="empty-message" hidden>該当するリンクがありません</p>
+
+    <section id="linkSections" class="link-sections" aria-label="カテゴリ別リンク一覧"></section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
