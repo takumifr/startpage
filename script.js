@@ -737,3 +737,17 @@ resetButton.addEventListener("click", () => {
 searchInput.addEventListener("input", renderCurrentLinks);
 
 renderCurrentLinks();
+
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    return;
+  }
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js", { scope: "./" }).catch((error) => {
+      console.warn("Service Workerの登録に失敗しました。ページ本体は通常どおり動作します。", error);
+    });
+  });
+}
+
+registerServiceWorker();
