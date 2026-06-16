@@ -321,27 +321,25 @@ const defaultLinks = [
   ...link
 }));
 
+
 const categoryOrder = [
-  "AI",
-  "Google",
-  "YouTube",
-  "農業",
-  "販売",
-  "金融",
-  "買い物",
-  "仕事",
-  "開発",
-  "その他"
+  "AI", "Google", "YouTube", "農業", "販売", "金融", "買い物", "仕事", "開発", "その他"
 ];
 const STORAGE_KEY = "startpage-links-v3";
+const FOLDER_ORDER_KEY = "startpage-folder-order-v6";
 
-let links = loadLinks();
+let links = normalizeLinks(loadRawLinks());
+let folderOrder = loadFolderOrder();
 let editingLinkId = null;
+let currentFolder = null;
+let editMode = false;
+let dragState = null;
 
 const searchInput = document.querySelector("#searchInput");
-const linkSections = document.querySelector("#linkSections");
+const launcherView = document.querySelector("#launcherView");
 const emptyMessage = document.querySelector("#emptyMessage");
 const showFormButton = document.querySelector("#showFormButton");
+const editModeButton = document.querySelector("#editModeButton");
 const resetButton = document.querySelector("#resetButton");
 const exportButton = document.querySelector("#exportButton");
 const importButton = document.querySelector("#importButton");
@@ -358,396 +356,150 @@ const linkUrlInput = document.querySelector("#linkUrl");
 const linkCategoryInput = document.querySelector("#linkCategory");
 const linkDescriptionInput = document.querySelector("#linkDescription");
 const linkIconInput = document.querySelector("#linkIcon");
+const folderSuggestions = document.querySelector("#folderSuggestions");
 
-function copyDefaultLinks() {
-  return defaultLinks.map((link) => ({ ...link }));
-}
-
-function loadLinks() {
+function copyDefaultLinks() { return defaultLinks.map((link) => ({ ...link })); }
+function loadRawLinks() {
   const savedLinks = localStorage.getItem(STORAGE_KEY);
-
-  if (!savedLinks) {
-    return copyDefaultLinks();
-  }
-
+  if (!savedLinks) return copyDefaultLinks();
   try {
     const parsedLinks = JSON.parse(savedLinks);
-    if (Array.isArray(parsedLinks)) {
-      return parsedLinks.map((link, index) => ({
-        id: link.id || `saved-${index + 1}`,
-        name: link.name || "",
-        url: link.url || "",
-        category: link.category || "その他",
-        description: link.description || "",
-        icon: link.icon || "🔗"
-      }));
-    }
+    return Array.isArray(parsedLinks) ? parsedLinks : copyDefaultLinks();
   } catch (error) {
     console.warn("保存済みリンクの読み込みに失敗しました。初期リンクを表示します。", error);
-  }
-
-  return copyDefaultLinks();
-}
-
-function saveLinks() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
-}
-
-function showBackupMessage(message, type = "") {
-  backupMessage.textContent = message;
-  backupMessage.className = "backup-message";
-
-  if (type) {
-    backupMessage.classList.add(`backup-message--${type}`);
+    return copyDefaultLinks();
   }
 }
-
-function createExportFileName() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-
-  return `startpage-links-${year}-${month}-${day}.json`;
+function loadFolderOrder() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(FOLDER_ORDER_KEY) || "[]");
+    if (Array.isArray(parsed)) return mergeFolderOrder(parsed.filter((item) => typeof item === "string"));
+  } catch (error) { console.warn("フォルダ順の読み込みに失敗しました。", error); }
+  return mergeFolderOrder(categoryOrder);
 }
-
-function generateImportedId(index) {
-  return `imported-${Date.now()}-${index + 1}`;
+function mergeFolderOrder(baseOrder) {
+  const folders = [...new Set(links.map((link) => link.category || "その他"))];
+  return [...baseOrder.filter((folder) => folders.includes(folder)), ...folders.filter((folder) => !baseOrder.includes(folder))];
 }
-
-function normalizeImportedLinks(importedLinks) {
-  if (!Array.isArray(importedLinks)) {
-    throw new Error("JSONの一番外側はリンク一覧の配列にしてください。");
-  }
-
-  const usedIds = new Set();
-
-  return importedLinks.map((link, index) => {
-    if (!link || typeof link !== "object" || Array.isArray(link)) {
-      throw new Error(`${index + 1}件目のリンク形式が正しくありません。`);
-    }
-
-    const name = typeof link.name === "string" ? link.name.trim() : "";
-    const url = typeof link.url === "string" ? normalizeUrl(link.url) : "";
-    const category = typeof link.category === "string" ? link.category.trim() : "";
-
-    if (!name || !url || !category) {
-      throw new Error(`${index + 1}件目に必須項目 name / url / category がありません。`);
-    }
-
-    const rawId = typeof link.id === "string" ? link.id.trim() : "";
-    const id = rawId && !usedIds.has(rawId) ? rawId : generateImportedId(index);
-    usedIds.add(id);
-
+function normalizeLinks(rawLinks) {
+  const categoryCounts = new Map();
+  return rawLinks.map((link, index) => {
+    const category = typeof link.category === "string" && link.category.trim() ? link.category.trim() : "その他";
+    const order = Number.isFinite(link.order) ? link.order : (categoryCounts.get(category) || 0);
+    categoryCounts.set(category, Math.max(categoryCounts.get(category) || 0, order + 1));
     return {
-      id,
-      name,
-      url,
+      id: typeof link.id === "string" && link.id ? link.id : `saved-${index + 1}`,
+      name: typeof link.name === "string" ? link.name : "",
+      url: typeof link.url === "string" ? link.url : "",
       category,
-      description: typeof link.description === "string" ? link.description.trim() : "",
-      icon: typeof link.icon === "string" && link.icon.trim() ? link.icon.trim() : "🔗"
+      description: typeof link.description === "string" ? link.description : "",
+      icon: typeof link.icon === "string" && link.icon ? link.icon : "🔗",
+      order
     };
   });
 }
-
-function normalizeUrl(url) {
-  const trimmedUrl = url.trim();
-  if (trimmedUrl === "") {
-    return "";
-  }
-
-  if (/^https?:\/\//i.test(trimmedUrl)) {
-    return trimmedUrl;
-  }
-
-  return `https://${trimmedUrl}`;
+function saveLinks() { localStorage.setItem(STORAGE_KEY, JSON.stringify(links)); }
+function saveFolderOrder() { folderOrder = mergeFolderOrder(folderOrder); localStorage.setItem(FOLDER_ORDER_KEY, JSON.stringify(folderOrder)); updateFolderSuggestions(); }
+function persistAll() { normalizeOrders(); saveLinks(); saveFolderOrder(); }
+function normalizeOrders() {
+  getFolders().forEach((folder) => getLinksInFolder(folder).forEach((link, index) => { link.order = index; }));
 }
-
-function createLinkCard(link) {
-  const card = document.createElement("article");
-  card.className = "link-card";
-
-  const anchor = document.createElement("a");
-  anchor.className = "link-card__main";
-  anchor.href = link.url;
-  anchor.target = "_blank";
-  anchor.rel = "noopener noreferrer";
-  anchor.setAttribute("aria-label", `${link.name}を新しいタブで開く`);
-
-  const content = document.createElement("div");
-  content.className = "link-card__content";
-
-  const icon = document.createElement("span");
-  icon.className = "link-card__icon";
-  icon.setAttribute("aria-hidden", "true");
-  icon.textContent = link.icon || "🔗";
-
-  const name = document.createElement("span");
-  name.className = "link-card__name";
-  name.textContent = link.name;
-
-  const description = document.createElement("p");
-  description.className = "link-card__description";
-  description.textContent = link.description;
-
-  content.appendChild(icon);
-  content.appendChild(name);
-  content.appendChild(description);
-  anchor.appendChild(content);
-
-  const actions = document.createElement("div");
-  actions.className = "link-card__actions";
-
-  const editButton = document.createElement("button");
-  editButton.className = "button button--ghost";
-  editButton.type = "button";
-  editButton.textContent = "編集";
-  editButton.addEventListener("click", () => startEditing(link.id));
-
-  const deleteButton = document.createElement("button");
-  deleteButton.className = "button button--danger";
-  deleteButton.type = "button";
-  deleteButton.textContent = "削除";
-  deleteButton.addEventListener("click", () => deleteLink(link.id));
-
-  actions.appendChild(editButton);
-  actions.appendChild(deleteButton);
-  card.appendChild(anchor);
-  card.appendChild(actions);
-
-  return card;
+function updateFolderSuggestions() {
+  folderSuggestions.textContent = "";
+  getFolders().forEach((folder) => { const option = document.createElement("option"); option.value = folder; folderSuggestions.appendChild(option); });
 }
-
-function groupLinksByCategory(filteredLinks) {
-  const knownGroups = categoryOrder
-    .map((category) => ({
-      category,
-      links: filteredLinks.filter((link) => link.category === category)
-    }))
-    .filter((group) => group.links.length > 0);
-
-  const extraCategories = [...new Set(filteredLinks
-    .map((link) => link.category)
-    .filter((category) => !categoryOrder.includes(category)))];
-
-  const extraGroups = extraCategories.map((category) => ({
-    category,
-    links: filteredLinks.filter((link) => link.category === category)
+function showBackupMessage(message, type = "") { backupMessage.textContent = message; backupMessage.className = "backup-message"; if (type) backupMessage.classList.add(`backup-message--${type}`); }
+function createExportFileName() { const d = new Date(); return `startpage-links-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.json`; }
+function generateImportedId(index) { return `imported-${Date.now()}-${index + 1}`; }
+function normalizeImportedLinks(importedLinks) {
+  if (!Array.isArray(importedLinks)) throw new Error("JSONの一番外側はリンク一覧の配列にしてください。");
+  const usedIds = new Set();
+  return normalizeLinks(importedLinks.map((link, index) => {
+    if (!link || typeof link !== "object" || Array.isArray(link)) throw new Error(`${index + 1}件目のリンク形式が正しくありません。`);
+    const name = typeof link.name === "string" ? link.name.trim() : "";
+    const url = typeof link.url === "string" ? normalizeUrl(link.url) : "";
+    const category = typeof link.category === "string" ? link.category.trim() : "";
+    if (!name || !url || !category) throw new Error(`${index + 1}件目に必須項目 name / url / category がありません。`);
+    const rawId = typeof link.id === "string" ? link.id.trim() : "";
+    const id = rawId && !usedIds.has(rawId) ? rawId : generateImportedId(index); usedIds.add(id);
+    return { id, name, url, category, description: typeof link.description === "string" ? link.description.trim() : "", icon: typeof link.icon === "string" && link.icon.trim() ? link.icon.trim() : "🔗", order: Number.isFinite(link.order) ? link.order : undefined };
   }));
-
-  return [...knownGroups, ...extraGroups];
 }
+function normalizeUrl(url) { const trimmedUrl = url.trim(); return trimmedUrl === "" || /^https?:\/\//i.test(trimmedUrl) ? trimmedUrl : `https://${trimmedUrl}`; }
+function getFolders() { folderOrder = mergeFolderOrder(folderOrder); return folderOrder; }
+function getLinksInFolder(folder) { return links.filter((link) => link.category === folder).sort((a,b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name, "ja")); }
+function filterLinks(searchText) { const k = searchText.trim().toLowerCase(); if (!k) return links; return links.filter((link) => `${link.name} ${link.category} ${link.description}`.toLowerCase().includes(k)); }
 
-function renderLinks(filteredLinks) {
-  linkSections.textContent = "";
-  emptyMessage.hidden = filteredLinks.length > 0;
-
-  groupLinksByCategory(filteredLinks).forEach((group) => {
-    const section = document.createElement("section");
-    section.className = "category";
-
-    const title = document.createElement("h2");
-    title.className = "category__title";
-    title.textContent = group.category;
-
-    const grid = document.createElement("div");
-    grid.className = "card-grid";
-
-    group.links.forEach((link) => {
-      grid.appendChild(createLinkCard(link));
-    });
-
-    section.appendChild(title);
-    section.appendChild(grid);
-    linkSections.appendChild(section);
-  });
+function createIconShell(type, id) {
+  const item = document.createElement("div");
+  item.className = `launcher-item launcher-item--${type}`;
+  item.dataset.type = type; item.dataset.id = id;
+  if (editMode && !searchInput.value.trim()) item.classList.add("is-editing");
+  return item;
 }
-
-function filterLinks(searchText) {
-  const keyword = searchText.trim().toLowerCase();
-
-  if (keyword === "") {
-    return links;
-  }
-
-  return links.filter((link) => {
-    const searchTarget = `${link.name} ${link.category} ${link.description}`.toLowerCase();
-    return searchTarget.includes(keyword);
-  });
+function createFolderIcon(folder) {
+  const item = createIconShell("folder", folder);
+  const button = document.createElement("button"); button.type = "button"; button.className = "app-icon app-icon--folder"; button.setAttribute("aria-label", `${folder}フォルダを開く`);
+  const preview = document.createElement("span"); preview.className = "folder-preview";
+  getLinksInFolder(folder).slice(0,4).forEach((link) => { const mini = document.createElement("span"); mini.textContent = link.icon || "🔗"; preview.appendChild(mini); });
+  button.appendChild(preview); button.addEventListener("click", () => { if (!editMode) { currentFolder = folder; renderCurrentView(); } });
+  item.append(button, createName(folder), createMeta(`${getLinksInFolder(folder).length}件`), createReorderActions(item)); enableDrag(item); return item;
 }
-
-function renderCurrentLinks() {
-  renderLinks(filterLinks(searchInput.value));
+function createLinkIcon(link, showFolder = false) {
+  const item = createIconShell("link", link.id);
+  const anchor = document.createElement("a"); anchor.className = "app-icon"; anchor.href = link.url; anchor.target = "_blank"; anchor.rel = "noopener noreferrer"; anchor.setAttribute("aria-label", `${link.name}を新しいタブで開く`);
+  const mark = document.createElement("span"); mark.className = "app-icon__mark"; mark.textContent = link.icon || "🔗"; anchor.appendChild(mark);
+  if (editMode || searchInput.value.trim()) anchor.addEventListener("click", (event) => { if (editMode) event.preventDefault(); });
+  item.append(anchor, createName(link.name)); if (showFolder) item.appendChild(createMeta(link.category)); item.appendChild(createItemActions(link)); enableDrag(item); return item;
 }
-
-function showForm() {
-  linkFormPanel.hidden = false;
-  linkNameInput.focus();
+function createName(text) { const name = document.createElement("span"); name.className = "launcher-item__name"; name.textContent = text; return name; }
+function createMeta(text) { const meta = document.createElement("span"); meta.className = "launcher-item__meta"; meta.textContent = text; return meta; }
+function createItemActions(link) {
+  const actions = document.createElement("div"); actions.className = "launcher-item__actions";
+  const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "編集"; edit.className = "mini-button"; edit.addEventListener("click", () => startEditing(link.id));
+  const del = document.createElement("button"); del.type = "button"; del.textContent = "削除"; del.className = "mini-button mini-button--danger"; del.addEventListener("click", () => deleteLink(link.id));
+  actions.append(edit, del, createReorderActions()); return actions;
 }
-
-function resetForm() {
-  editingLinkId = null;
-  linkForm.reset();
-  formTitle.textContent = "リンクを追加";
-  submitButton.textContent = "追加";
-  formMessage.textContent = "";
-  linkFormPanel.hidden = true;
+function createReorderActions() { const wrap = document.createElement("span"); wrap.className = "reorder-buttons"; ["←","→"].forEach((label, i) => { const b = document.createElement("button"); b.type="button"; b.className="mini-button"; b.textContent=label; b.addEventListener("click", (e)=>{ e.stopPropagation(); moveItem(e.currentTarget.closest(".launcher-item"), i ? 1 : -1); }); wrap.appendChild(b); }); return wrap; }
+function renderCurrentView() {
+  const keyword = searchInput.value.trim(); launcherView.textContent = "";
+  if (keyword) { currentFolder = null; renderSearchResults(filterLinks(keyword)); return; }
+  if (currentFolder) renderFolder(currentFolder); else renderHome();
 }
-
-function startEditing(linkId) {
-  const link = links.find((item) => item.id === linkId);
-  if (!link) {
-    return;
-  }
-
-  editingLinkId = linkId;
-  formTitle.textContent = "リンクを編集";
-  submitButton.textContent = "更新";
-  formMessage.textContent = "";
-  linkNameInput.value = link.name;
-  linkUrlInput.value = link.url;
-  linkCategoryInput.value = link.category;
-  linkDescriptionInput.value = link.description;
-  linkIconInput.value = link.icon;
-  linkFormPanel.hidden = false;
-  linkNameInput.focus();
+function renderHome() { emptyMessage.hidden = getFolders().length > 0; const grid = createGrid("ホーム画面"); getFolders().forEach((folder) => grid.appendChild(createFolderIcon(folder))); launcherView.appendChild(grid); }
+function renderFolder(folder) {
+  const header = document.createElement("div"); header.className = "folder-header";
+  const back = document.createElement("button"); back.type="button"; back.className="button button--secondary"; back.textContent="← 戻る"; back.addEventListener("click",()=>{ currentFolder=null; renderCurrentView(); });
+  const title = document.createElement("h2"); title.textContent = folder; header.append(back,title); launcherView.appendChild(header);
+  const folderLinks = getLinksInFolder(folder); emptyMessage.hidden = folderLinks.length > 0; const grid = createGrid(`${folder}フォルダ`); folderLinks.forEach((link)=>grid.appendChild(createLinkIcon(link))); launcherView.appendChild(grid);
 }
-
-function exportLinks() {
-  const json = JSON.stringify(links, null, 2);
-  const blob = new Blob([json], { type: "application/json" });
-  const downloadUrl = URL.createObjectURL(blob);
-  const downloadLink = document.createElement("a");
-
-  downloadLink.href = downloadUrl;
-  downloadLink.download = createExportFileName();
-  document.body.appendChild(downloadLink);
-  downloadLink.click();
-  downloadLink.remove();
-  URL.revokeObjectURL(downloadUrl);
-  showBackupMessage("現在のリンク一覧をJSONファイルとしてエクスポートしました。", "success");
+function renderSearchResults(results) { emptyMessage.hidden = results.length > 0; const title = document.createElement("h2"); title.className="search-results-title"; title.textContent=`検索結果: ${results.length}件`; launcherView.appendChild(title); const grid = createGrid("検索結果"); results.forEach((link)=>grid.appendChild(createLinkIcon(link, true))); launcherView.appendChild(grid); }
+function createGrid(label) { const grid = document.createElement("div"); grid.className = "icon-grid"; grid.setAttribute("aria-label", label); return grid; }
+function setEditMode(next) { editMode = next; editModeButton.setAttribute("aria-pressed", String(editMode)); editModeButton.textContent = editMode ? "並び替え完了" : "並び替え"; renderCurrentView(); }
+function moveItem(item, delta) { if (!item) return; const items = [...item.parentElement.querySelectorAll(".launcher-item")]; const from = items.indexOf(item); const to = from + delta; if (to < 0 || to >= items.length) return; applyReorder(items[from], items[to]); renderCurrentView(); }
+function enableDrag(item) {
+  if (!editMode || searchInput.value.trim()) return;
+  item.addEventListener("pointerdown", (event) => { if (event.target.closest("button")) return; dragState = { item }; item.setPointerCapture(event.pointerId); item.classList.add("is-dragging"); });
+  item.addEventListener("pointerup", (event) => { if (!dragState) return; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(".launcher-item"); item.classList.remove("is-dragging"); if (target && target !== item && target.parentElement === item.parentElement) applyReorder(item, target); dragState = null; renderCurrentView(); });
 }
-
-function importLinksFromFile(file) {
-  if (!file) {
-    return;
-  }
-
-  const reader = new FileReader();
-
-  reader.addEventListener("load", () => {
-    try {
-      const parsedLinks = JSON.parse(reader.result);
-      const importedLinks = normalizeImportedLinks(parsedLinks);
-
-      if (!confirm(`現在のリンク一覧を、選択した${importedLinks.length}件のリンクで上書きしますか？`)) {
-        showBackupMessage("インポートをキャンセルしました。");
-        return;
-      }
-
-      links = importedLinks;
-      saveLinks();
-      resetForm();
-      renderCurrentLinks();
-      showBackupMessage(`${importedLinks.length}件のリンクをインポートして保存しました。`, "success");
-    } catch (error) {
-      showBackupMessage(`インポートできませんでした: ${error.message}`, "error");
-    } finally {
-      importFileInput.value = "";
-    }
-  });
-
-  reader.addEventListener("error", () => {
-    showBackupMessage("ファイルの読み込みに失敗しました。別のJSONファイルを選んでください。", "error");
-    importFileInput.value = "";
-  });
-
-  reader.readAsText(file);
+function applyReorder(source, target) {
+  if (source.dataset.type === "folder") { const from = folderOrder.indexOf(source.dataset.id); const to = folderOrder.indexOf(target.dataset.id); folderOrder.splice(to, 0, folderOrder.splice(from, 1)[0]); saveFolderOrder(); return; }
+  const folderLinks = getLinksInFolder(currentFolder); const from = folderLinks.findIndex((l)=>l.id===source.dataset.id); const to = folderLinks.findIndex((l)=>l.id===target.dataset.id); folderLinks.splice(to,0,folderLinks.splice(from,1)[0]); folderLinks.forEach((link,index)=>{ link.order=index; }); saveLinks();
 }
+function showForm() { linkFormPanel.hidden = false; linkNameInput.focus(); }
+function resetForm() { editingLinkId = null; linkForm.reset(); formTitle.textContent = "リンクを追加"; submitButton.textContent = "追加"; formMessage.textContent = ""; linkFormPanel.hidden = true; }
+function startEditing(linkId) { const link = links.find((i)=>i.id===linkId); if (!link) return; editingLinkId=linkId; formTitle.textContent="リンクを編集"; submitButton.textContent="更新"; formMessage.textContent=""; linkNameInput.value=link.name; linkUrlInput.value=link.url; linkCategoryInput.value=link.category; linkDescriptionInput.value=link.description; linkIconInput.value=link.icon; linkFormPanel.hidden=false; linkNameInput.focus(); }
+function exportLinks() { persistAll(); const blob = new Blob([JSON.stringify(links, null, 2)], {type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=createExportFileName(); document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); showBackupMessage("現在のリンク一覧をJSONファイルとしてエクスポートしました。", "success"); }
+function importLinksFromFile(file) { if (!file) return; const reader = new FileReader(); reader.addEventListener("load",()=>{ try { const importedLinks=normalizeImportedLinks(JSON.parse(reader.result)); if (!confirm(`現在のリンク一覧を、選択した${importedLinks.length}件のリンクで上書きしますか？`)) { showBackupMessage("インポートをキャンセルしました。"); return; } links=importedLinks; folderOrder=mergeFolderOrder(categoryOrder); persistAll(); currentFolder=null; resetForm(); renderCurrentView(); showBackupMessage(`${importedLinks.length}件のリンクをインポートして保存しました。`, "success"); } catch(error){ showBackupMessage(`インポートできませんでした: ${error.message}`, "error"); } finally { importFileInput.value=""; }}); reader.addEventListener("error",()=>{ showBackupMessage("ファイルの読み込みに失敗しました。別のJSONファイルを選んでください。", "error"); importFileInput.value=""; }); reader.readAsText(file); }
+function deleteLink(linkId) { const link=links.find((i)=>i.id===linkId); if (!link || !confirm(`「${link.name}」を削除しますか？`)) return; links=links.filter((i)=>i.id!==linkId); persistAll(); if (editingLinkId===linkId) resetForm(); renderCurrentView(); }
 
-function deleteLink(linkId) {
-  const link = links.find((item) => item.id === linkId);
-  if (!link || !confirm(`「${link.name}」を削除しますか？`)) {
-    return;
-  }
+linkForm.addEventListener("submit", (event) => { event.preventDefault(); const name=linkNameInput.value.trim(); const url=normalizeUrl(linkUrlInput.value); const category=linkCategoryInput.value.trim(); const description=linkDescriptionInput.value.trim(); const icon=linkIconInput.value.trim()||"🔗"; if (!name || !url || !category) { formMessage.textContent="リンク名・URL・フォルダを入力してください。"; return; } if (!folderOrder.includes(category)) folderOrder.push(category); const order = editingLinkId ? links.find((l)=>l.id===editingLinkId)?.order ?? getLinksInFolder(category).length : getLinksInFolder(category).length; const data={name,url,category,description,icon,order}; links = editingLinkId ? links.map((link)=>link.id===editingLinkId ? {...link,...data} : link) : [...links, {id:`user-${Date.now()}`,...data}]; persistAll(); currentFolder=category; resetForm(); renderCurrentView(); });
+showFormButton.addEventListener("click",()=>{ resetForm(); if (currentFolder) linkCategoryInput.value=currentFolder; showForm(); });
+editModeButton.addEventListener("click",()=>setEditMode(!editMode));
+cancelButton.addEventListener("click", resetForm); exportButton.addEventListener("click", exportLinks); importButton.addEventListener("click",()=>importFileInput.click()); importFileInput.addEventListener("change",()=>importLinksFromFile(importFileInput.files[0]));
+resetButton.addEventListener("click",()=>{ if (!confirm("保存データを削除して、初期リンク一覧に戻しますか？")) return; localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(FOLDER_ORDER_KEY); links=normalizeLinks(copyDefaultLinks()); folderOrder=mergeFolderOrder(categoryOrder); currentFolder=null; resetForm(); persistAll(); renderCurrentView(); });
+searchInput.addEventListener("input", renderCurrentView);
 
-  links = links.filter((item) => item.id !== linkId);
-  saveLinks();
-  if (editingLinkId === linkId) {
-    resetForm();
-  }
-  renderCurrentLinks();
-}
-
-linkForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const name = linkNameInput.value.trim();
-  const url = normalizeUrl(linkUrlInput.value);
-  const category = linkCategoryInput.value.trim();
-  const description = linkDescriptionInput.value.trim();
-  const icon = linkIconInput.value.trim() || "🔗";
-
-  if (!name || !url || !category) {
-    formMessage.textContent = "リンク名・URL・カテゴリを入力してください。";
-    return;
-  }
-
-  const linkData = { name, url, category, description, icon };
-
-  if (editingLinkId) {
-    links = links.map((link) => link.id === editingLinkId ? { ...link, ...linkData } : link);
-  } else {
-    links = [{ id: `user-${Date.now()}`, ...linkData }, ...links];
-  }
-
-  saveLinks();
-  resetForm();
-  renderCurrentLinks();
-});
-
-showFormButton.addEventListener("click", () => {
-  resetForm();
-  showForm();
-});
-
-cancelButton.addEventListener("click", resetForm);
-
-exportButton.addEventListener("click", exportLinks);
-
-importButton.addEventListener("click", () => {
-  importFileInput.click();
-});
-
-importFileInput.addEventListener("change", () => {
-  importLinksFromFile(importFileInput.files[0]);
-});
-
-resetButton.addEventListener("click", () => {
-  if (!confirm("保存データを削除して、初期リンク一覧に戻しますか？")) {
-    return;
-  }
-
-  localStorage.removeItem(STORAGE_KEY);
-  links = copyDefaultLinks();
-  resetForm();
-  renderCurrentLinks();
-});
-
-searchInput.addEventListener("input", renderCurrentLinks);
-
-renderCurrentLinks();
-
-function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) {
-    return;
-  }
-
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js", { scope: "./" }).catch((error) => {
-      console.warn("Service Workerの登録に失敗しました。ページ本体は通常どおり動作します。", error);
-    });
-  });
-}
-
+persistAll(); renderCurrentView();
+function registerServiceWorker() { if (!("serviceWorker" in navigator)) return; window.addEventListener("load",()=>{ navigator.serviceWorker.register("./service-worker.js", {scope:"./"}).catch((error)=>console.warn("Service Workerの登録に失敗しました。ページ本体は通常どおり動作します。", error)); }); }
 registerServiceWorker();
