@@ -26,6 +26,42 @@
         placeholder="例: ChatGPT、農業、天気、銀行"
         autocomplete="off"
       >
+      <div class="search-panel__actions">
+        <button id="showFormButton" class="button button--primary" type="button">リンクを追加</button>
+        <button id="resetButton" class="button button--secondary" type="button">保存データをリセット</button>
+      </div>
+    </section>
+
+    <section id="linkFormPanel" class="link-form-panel" aria-labelledby="formTitle" hidden>
+      <h2 id="formTitle">リンクを追加</h2>
+      <p class="link-form-panel__help">リンク名・URL・カテゴリは必須です。URLは http:// または https:// で始まらない場合、自動で https:// を補完します。</p>
+      <form id="linkForm" class="link-form">
+        <div class="form-field">
+          <label for="linkName">リンク名 <span aria-hidden="true">*</span></label>
+          <input id="linkName" name="name" type="text" required autocomplete="off">
+        </div>
+        <div class="form-field">
+          <label for="linkUrl">URL <span aria-hidden="true">*</span></label>
+          <input id="linkUrl" name="url" type="text" required inputmode="url" autocomplete="url" placeholder="https://example.com">
+        </div>
+        <div class="form-field">
+          <label for="linkCategory">カテゴリ <span aria-hidden="true">*</span></label>
+          <input id="linkCategory" name="category" type="text" required autocomplete="off" placeholder="例: AI、仕事、買い物">
+        </div>
+        <div class="form-field">
+          <label for="linkDescription">説明</label>
+          <textarea id="linkDescription" name="description" rows="3" placeholder="どんな用途で使うリンクかを書きます"></textarea>
+        </div>
+        <div class="form-field">
+          <label for="linkIcon">アイコン</label>
+          <input id="linkIcon" name="icon" type="text" maxlength="4" autocomplete="off" placeholder="例: 🤖、G、AI">
+        </div>
+        <p id="formMessage" class="form-message" role="status" aria-live="polite"></p>
+        <div class="link-form__actions">
+          <button id="submitButton" class="button button--primary" type="submit">追加</button>
+          <button id="cancelButton" class="button button--secondary" type="button">キャンセル</button>
+        </div>
+      </form>
     </section>
 
     <p id="emptyMessage" class="empty-message" hidden>該当するリンクがありません</p>

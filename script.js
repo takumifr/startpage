@@ -1,6 +1,6 @@
-// リンクを増やしたいときは、この links 配列にオブジェクトを追加します。
+// 初期リンク一覧です。リセットすると、この内容に戻ります。
 // category は categoryOrder にある名前と合わせると、指定した順番で表示されます。
-const links = [
+const defaultLinks = [
   {
     category: "AI",
     name: "ChatGPT",
@@ -316,7 +316,10 @@ const links = [
     icon: "翻",
     url: "https://www.deepl.com/translator"
   }
-];
+].map((link, index) => ({
+  id: `default-${index + 1}`,
+  ...link
+}));
 
 const categoryOrder = [
   "AI",
@@ -330,45 +333,155 @@ const categoryOrder = [
   "開発",
   "その他"
 ];
+const STORAGE_KEY = "startpage-links-v3";
+
+let links = loadLinks();
+let editingLinkId = null;
+
 const searchInput = document.querySelector("#searchInput");
 const linkSections = document.querySelector("#linkSections");
 const emptyMessage = document.querySelector("#emptyMessage");
+const showFormButton = document.querySelector("#showFormButton");
+const resetButton = document.querySelector("#resetButton");
+const linkFormPanel = document.querySelector("#linkFormPanel");
+const linkForm = document.querySelector("#linkForm");
+const formTitle = document.querySelector("#formTitle");
+const formMessage = document.querySelector("#formMessage");
+const submitButton = document.querySelector("#submitButton");
+const cancelButton = document.querySelector("#cancelButton");
+const linkNameInput = document.querySelector("#linkName");
+const linkUrlInput = document.querySelector("#linkUrl");
+const linkCategoryInput = document.querySelector("#linkCategory");
+const linkDescriptionInput = document.querySelector("#linkDescription");
+const linkIconInput = document.querySelector("#linkIcon");
+
+function copyDefaultLinks() {
+  return defaultLinks.map((link) => ({ ...link }));
+}
+
+function loadLinks() {
+  const savedLinks = localStorage.getItem(STORAGE_KEY);
+
+  if (!savedLinks) {
+    return copyDefaultLinks();
+  }
+
+  try {
+    const parsedLinks = JSON.parse(savedLinks);
+    if (Array.isArray(parsedLinks)) {
+      return parsedLinks.map((link, index) => ({
+        id: link.id || `saved-${index + 1}`,
+        name: link.name || "",
+        url: link.url || "",
+        category: link.category || "その他",
+        description: link.description || "",
+        icon: link.icon || "🔗"
+      }));
+    }
+  } catch (error) {
+    console.warn("保存済みリンクの読み込みに失敗しました。初期リンクを表示します。", error);
+  }
+
+  return copyDefaultLinks();
+}
+
+function saveLinks() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+}
+
+function normalizeUrl(url) {
+  const trimmedUrl = url.trim();
+  if (trimmedUrl === "") {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(trimmedUrl)) {
+    return trimmedUrl;
+  }
+
+  return `https://${trimmedUrl}`;
+}
 
 function createLinkCard(link) {
-  const card = document.createElement("a");
+  const card = document.createElement("article");
   card.className = "link-card";
-  card.href = link.url;
-  card.target = "_blank";
-  card.rel = "noopener noreferrer";
-  card.setAttribute("aria-label", `${link.name}を新しいタブで開く`);
 
-  card.innerHTML = `
-    <div class="link-card__content">
-      <span class="link-card__icon" aria-hidden="true">${link.icon}</span>
-      <span class="link-card__name">${link.name}</span>
-      <p class="link-card__description">${link.description}</p>
-    </div>
-  `;
+  const anchor = document.createElement("a");
+  anchor.className = "link-card__main";
+  anchor.href = link.url;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  anchor.setAttribute("aria-label", `${link.name}を新しいタブで開く`);
+
+  const content = document.createElement("div");
+  content.className = "link-card__content";
+
+  const icon = document.createElement("span");
+  icon.className = "link-card__icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = link.icon || "🔗";
+
+  const name = document.createElement("span");
+  name.className = "link-card__name";
+  name.textContent = link.name;
+
+  const description = document.createElement("p");
+  description.className = "link-card__description";
+  description.textContent = link.description;
+
+  content.appendChild(icon);
+  content.appendChild(name);
+  content.appendChild(description);
+  anchor.appendChild(content);
+
+  const actions = document.createElement("div");
+  actions.className = "link-card__actions";
+
+  const editButton = document.createElement("button");
+  editButton.className = "button button--ghost";
+  editButton.type = "button";
+  editButton.textContent = "編集";
+  editButton.addEventListener("click", () => startEditing(link.id));
+
+  const deleteButton = document.createElement("button");
+  deleteButton.className = "button button--danger";
+  deleteButton.type = "button";
+  deleteButton.textContent = "削除";
+  deleteButton.addEventListener("click", () => deleteLink(link.id));
+
+  actions.appendChild(editButton);
+  actions.appendChild(deleteButton);
+  card.appendChild(anchor);
+  card.appendChild(actions);
 
   return card;
 }
 
 function groupLinksByCategory(filteredLinks) {
-  return categoryOrder
+  const knownGroups = categoryOrder
     .map((category) => ({
       category,
       links: filteredLinks.filter((link) => link.category === category)
     }))
     .filter((group) => group.links.length > 0);
+
+  const extraCategories = [...new Set(filteredLinks
+    .map((link) => link.category)
+    .filter((category) => !categoryOrder.includes(category)))];
+
+  const extraGroups = extraCategories.map((category) => ({
+    category,
+    links: filteredLinks.filter((link) => link.category === category)
+  }));
+
+  return [...knownGroups, ...extraGroups];
 }
 
 function renderLinks(filteredLinks) {
-  linkSections.innerHTML = "";
+  linkSections.textContent = "";
   emptyMessage.hidden = filteredLinks.length > 0;
 
-  const groups = groupLinksByCategory(filteredLinks);
-
-  groups.forEach((group) => {
+  groupLinksByCategory(filteredLinks).forEach((group) => {
     const section = document.createElement("section");
     section.className = "category";
 
@@ -402,9 +515,102 @@ function filterLinks(searchText) {
   });
 }
 
-searchInput.addEventListener("input", (event) => {
-  const filteredLinks = filterLinks(event.target.value);
-  renderLinks(filteredLinks);
+function renderCurrentLinks() {
+  renderLinks(filterLinks(searchInput.value));
+}
+
+function showForm() {
+  linkFormPanel.hidden = false;
+  linkNameInput.focus();
+}
+
+function resetForm() {
+  editingLinkId = null;
+  linkForm.reset();
+  formTitle.textContent = "リンクを追加";
+  submitButton.textContent = "追加";
+  formMessage.textContent = "";
+  linkFormPanel.hidden = true;
+}
+
+function startEditing(linkId) {
+  const link = links.find((item) => item.id === linkId);
+  if (!link) {
+    return;
+  }
+
+  editingLinkId = linkId;
+  formTitle.textContent = "リンクを編集";
+  submitButton.textContent = "更新";
+  formMessage.textContent = "";
+  linkNameInput.value = link.name;
+  linkUrlInput.value = link.url;
+  linkCategoryInput.value = link.category;
+  linkDescriptionInput.value = link.description;
+  linkIconInput.value = link.icon;
+  linkFormPanel.hidden = false;
+  linkNameInput.focus();
+}
+
+function deleteLink(linkId) {
+  const link = links.find((item) => item.id === linkId);
+  if (!link || !confirm(`「${link.name}」を削除しますか？`)) {
+    return;
+  }
+
+  links = links.filter((item) => item.id !== linkId);
+  saveLinks();
+  if (editingLinkId === linkId) {
+    resetForm();
+  }
+  renderCurrentLinks();
+}
+
+linkForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const name = linkNameInput.value.trim();
+  const url = normalizeUrl(linkUrlInput.value);
+  const category = linkCategoryInput.value.trim();
+  const description = linkDescriptionInput.value.trim();
+  const icon = linkIconInput.value.trim() || "🔗";
+
+  if (!name || !url || !category) {
+    formMessage.textContent = "リンク名・URL・カテゴリを入力してください。";
+    return;
+  }
+
+  const linkData = { name, url, category, description, icon };
+
+  if (editingLinkId) {
+    links = links.map((link) => link.id === editingLinkId ? { ...link, ...linkData } : link);
+  } else {
+    links = [{ id: `user-${Date.now()}`, ...linkData }, ...links];
+  }
+
+  saveLinks();
+  resetForm();
+  renderCurrentLinks();
 });
 
-renderLinks(links);
+showFormButton.addEventListener("click", () => {
+  resetForm();
+  showForm();
+});
+
+cancelButton.addEventListener("click", resetForm);
+
+resetButton.addEventListener("click", () => {
+  if (!confirm("保存データを削除して、初期リンク一覧に戻しますか？")) {
+    return;
+  }
+
+  localStorage.removeItem(STORAGE_KEY);
+  links = copyDefaultLinks();
+  resetForm();
+  renderCurrentLinks();
+});
+
+searchInput.addEventListener("input", renderCurrentLinks);
+
+renderCurrentLinks();
