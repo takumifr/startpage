@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Startpage icon</title>
+  <desc id="desc">A blue rounded square with a simple startpage tile grid and the letter S.</desc>
+  <defs>
+    <linearGradient id="bg" x1="96" y1="64" x2="416" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#1e293b" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#eef2f7"/>
+  <rect x="56" y="56" width="400" height="400" rx="92" fill="url(#bg)" filter="url(#shadow)"/>
+  <g fill="#ffffff" opacity="0.95">
+    <rect x="128" y="132" width="86" height="86" rx="24"/>
+    <rect x="238" y="132" width="146" height="86" rx="24" opacity="0.88"/>
+    <rect x="128" y="244" width="146" height="86" rx="24" opacity="0.88"/>
+    <rect x="298" y="244" width="86" height="86" rx="24"/>
+  </g>
+  <text x="256" y="407" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="86" font-weight="800" fill="#ffffff">S</text>
+</svg>
