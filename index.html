@@ -28,8 +28,12 @@
       >
       <div class="search-panel__actions">
         <button id="showFormButton" class="button button--primary" type="button">リンクを追加</button>
+        <button id="exportButton" class="button button--secondary" type="button">エクスポート</button>
+        <button id="importButton" class="button button--secondary" type="button">インポート</button>
         <button id="resetButton" class="button button--secondary" type="button">保存データをリセット</button>
       </div>
+      <input id="importFileInput" class="visually-hidden" type="file" accept="application/json,.json">
+      <p id="backupMessage" class="backup-message" role="status" aria-live="polite"></p>
     </section>
 
     <section id="linkFormPanel" class="link-form-panel" aria-labelledby="formTitle" hidden>

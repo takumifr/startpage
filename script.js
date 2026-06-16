@@ -343,6 +343,10 @@ const linkSections = document.querySelector("#linkSections");
 const emptyMessage = document.querySelector("#emptyMessage");
 const showFormButton = document.querySelector("#showFormButton");
 const resetButton = document.querySelector("#resetButton");
+const exportButton = document.querySelector("#exportButton");
+const importButton = document.querySelector("#importButton");
+const importFileInput = document.querySelector("#importFileInput");
+const backupMessage = document.querySelector("#backupMessage");
 const linkFormPanel = document.querySelector("#linkFormPanel");
 const linkForm = document.querySelector("#linkForm");
 const formTitle = document.querySelector("#formTitle");
@@ -387,6 +391,63 @@ function loadLinks() {
 
 function saveLinks() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(links));
+}
+
+function showBackupMessage(message, type = "") {
+  backupMessage.textContent = message;
+  backupMessage.className = "backup-message";
+
+  if (type) {
+    backupMessage.classList.add(`backup-message--${type}`);
+  }
+}
+
+function createExportFileName() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `startpage-links-${year}-${month}-${day}.json`;
+}
+
+function generateImportedId(index) {
+  return `imported-${Date.now()}-${index + 1}`;
+}
+
+function normalizeImportedLinks(importedLinks) {
+  if (!Array.isArray(importedLinks)) {
+    throw new Error("JSONの一番外側はリンク一覧の配列にしてください。");
+  }
+
+  const usedIds = new Set();
+
+  return importedLinks.map((link, index) => {
+    if (!link || typeof link !== "object" || Array.isArray(link)) {
+      throw new Error(`${index + 1}件目のリンク形式が正しくありません。`);
+    }
+
+    const name = typeof link.name === "string" ? link.name.trim() : "";
+    const url = typeof link.url === "string" ? normalizeUrl(link.url) : "";
+    const category = typeof link.category === "string" ? link.category.trim() : "";
+
+    if (!name || !url || !category) {
+      throw new Error(`${index + 1}件目に必須項目 name / url / category がありません。`);
+    }
+
+    const rawId = typeof link.id === "string" ? link.id.trim() : "";
+    const id = rawId && !usedIds.has(rawId) ? rawId : generateImportedId(index);
+    usedIds.add(id);
+
+    return {
+      id,
+      name,
+      url,
+      category,
+      description: typeof link.description === "string" ? link.description.trim() : "",
+      icon: typeof link.icon === "string" && link.icon.trim() ? link.icon.trim() : "🔗"
+    };
+  });
 }
 
 function normalizeUrl(url) {
@@ -552,6 +613,58 @@ function startEditing(linkId) {
   linkNameInput.focus();
 }
 
+function exportLinks() {
+  const json = JSON.stringify(links, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const downloadUrl = URL.createObjectURL(blob);
+  const downloadLink = document.createElement("a");
+
+  downloadLink.href = downloadUrl;
+  downloadLink.download = createExportFileName();
+  document.body.appendChild(downloadLink);
+  downloadLink.click();
+  downloadLink.remove();
+  URL.revokeObjectURL(downloadUrl);
+  showBackupMessage("現在のリンク一覧をJSONファイルとしてエクスポートしました。", "success");
+}
+
+function importLinksFromFile(file) {
+  if (!file) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.addEventListener("load", () => {
+    try {
+      const parsedLinks = JSON.parse(reader.result);
+      const importedLinks = normalizeImportedLinks(parsedLinks);
+
+      if (!confirm(`現在のリンク一覧を、選択した${importedLinks.length}件のリンクで上書きしますか？`)) {
+        showBackupMessage("インポートをキャンセルしました。");
+        return;
+      }
+
+      links = importedLinks;
+      saveLinks();
+      resetForm();
+      renderCurrentLinks();
+      showBackupMessage(`${importedLinks.length}件のリンクをインポートして保存しました。`, "success");
+    } catch (error) {
+      showBackupMessage(`インポートできませんでした: ${error.message}`, "error");
+    } finally {
+      importFileInput.value = "";
+    }
+  });
+
+  reader.addEventListener("error", () => {
+    showBackupMessage("ファイルの読み込みに失敗しました。別のJSONファイルを選んでください。", "error");
+    importFileInput.value = "";
+  });
+
+  reader.readAsText(file);
+}
+
 function deleteLink(linkId) {
   const link = links.find((item) => item.id === linkId);
   if (!link || !confirm(`「${link.name}」を削除しますか？`)) {
@@ -599,6 +712,16 @@ showFormButton.addEventListener("click", () => {
 });
 
 cancelButton.addEventListener("click", resetForm);
+
+exportButton.addEventListener("click", exportLinks);
+
+importButton.addEventListener("click", () => {
+  importFileInput.click();
+});
+
+importFileInput.addEventListener("change", () => {
+  importLinksFromFile(importFileInput.files[0]);
+});
 
 resetButton.addEventListener("click", () => {
   if (!confirm("保存データを削除して、初期リンク一覧に戻しますか？")) {
