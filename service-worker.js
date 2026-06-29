@@ -1,4 +1,4 @@
-const CACHE_NAME = "startpage-v6-static-v2";
+const CACHE_NAME = "startpage-v6-static-v3";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
