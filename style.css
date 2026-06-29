@@ -21,13 +21,8 @@ body {
     radial-gradient(circle at 100% 8%, rgba(236, 72, 153, 0.45), transparent 24rem),
     linear-gradient(145deg, #0f172a 0%, #1e293b 52%, #334155 100%);
 }
-.hero { padding: 34px 18px 18px; }
-.hero__content, .page { width: min(1120px, calc(100% - 28px)); margin: 0 auto; }
-.hero__label { margin: 0 0 8px; color: #bfdbfe; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
-h1 { margin: 0; font-size: clamp(2.1rem, 7vw, 4.2rem); line-height: 1.05; text-shadow: 0 8px 28px rgba(0,0,0,.24); }
+.page { width: min(1120px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 52px; }
 h2 { margin: 0; }
-.hero__description { max-width: 650px; margin: 14px 0 0; color: #dbeafe; font-size: 1rem; line-height: 1.75; }
-.page { padding-bottom: 52px; }
 .search-panel, .link-form-panel, .empty-message {
   color: var(--panel-text);
   background: var(--glass);
@@ -84,4 +79,4 @@ h2 { margin: 0; }
 .folder-header h2, .search-results-title { color: #fff; font-size: clamp(1.35rem, 4vw, 2rem); text-shadow: 0 4px 14px rgba(0,0,0,.28); }
 .empty-message { margin: 18px 0; padding: 22px; text-align: center; }
 @keyframes wiggle { 0%,100% { transform: rotate(-.6deg); } 50% { transform: rotate(.6deg); } }
-@media (min-width: 680px) { .hero { padding-top: 56px; } .search-panel, .link-form-panel { padding: 24px; } .icon-grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 28px 18px; } .app-icon { width: 86px; height: 86px; border-radius: 25px; } .app-icon__mark { width: 64px; height: 64px; font-size: 1.55rem; } .launcher-item__name { max-width: 112px; } .link-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .form-field:nth-child(4), .form-message, .link-form__actions { grid-column: 1 / -1; } }
+@media (min-width: 680px) { .page { padding-top: 28px; } .search-panel, .link-form-panel { padding: 24px; } .icon-grid { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 28px 18px; } .app-icon { width: 86px; height: 86px; border-radius: 25px; } .app-icon__mark { width: 64px; height: 64px; font-size: 1.55rem; } .launcher-item__name { max-width: 112px; } .link-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } .form-field:nth-child(4), .form-message, .link-form__actions { grid-column: 1 / -1; } }
