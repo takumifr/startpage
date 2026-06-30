@@ -1,12 +1,12 @@
 {
-  "name": "My Startpage",
-  "short_name": "Startpage",
-  "description": "よく使うリンクを検索・管理できる個人用スタートページです。",
+  "name": "Startpage Launcher",
+  "short_name": "Start",
+  "description": "よく使うリンクをスマホのホーム画面のように検索・整理できる個人用ランチャーです。",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#eef2f7",
-  "theme_color": "#2563eb",
+  "background_color": "#20242b",
+  "theme_color": "#1f2937",
   "icons": [
     {
       "src": "./icon.svg",
