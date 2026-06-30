@@ -8,7 +8,7 @@
   <title>Startpage Launcher</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=home-screen-v9">
+  <link rel="stylesheet" href="style.css?v=home-screen-v10">
 </head>
 <body>
   <main class="page">
@@ -69,6 +69,15 @@
           <input id="linkIcon" name="icon" type="text" maxlength="4" autocomplete="off" placeholder="例: 🤖、G、AI">
         </div>
         <div class="form-field">
+          <label for="linkIconSource">画像の種類</label>
+          <select id="linkIconSource" name="iconSource">
+            <option value="auto">自動</option>
+            <option value="touch">スマホ用</option>
+            <option value="favicon">ファビコン</option>
+            <option value="custom">指定URL</option>
+          </select>
+        </div>
+        <div class="form-field">
           <label for="linkIconUrl">アイコン画像URL</label>
           <input id="linkIconUrl" name="iconUrl" type="text" inputmode="url" autocomplete="url" placeholder="https://example.com/icon.png">
         </div>
@@ -81,6 +90,6 @@
     </section>
   </main>
 
-  <script src="script.js?v=home-screen-v9"></script>
+  <script src="script.js?v=home-screen-v10"></script>
 </body>
 </html>
