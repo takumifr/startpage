@@ -3,35 +3,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="よく使うリンクを検索・追加・編集できる個人用スタートページです。">
-  <meta name="theme-color" content="#2563eb">
-  <title>My Start Page</title>
+  <meta name="description" content="よく使うリンクをスマホのホーム画面のように整理できる個人用スタートページです。">
+  <meta name="theme-color" content="#1f2937">
+  <title>Startpage Launcher</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=home-screen-v9">
 </head>
 <body>
   <main class="page">
     <section class="search-panel" aria-labelledby="search-title">
-      <h2 id="search-title">リンクを検索</h2>
-      <label class="search-panel__label" for="searchInput">リンク名・フォルダ・説明文で絞り込む</label>
-      <input
-        id="searchInput"
-        class="search-panel__input"
-        type="search"
-        placeholder="例: ChatGPT、農業、天気、銀行"
-        autocomplete="off"
-      >
-      <div class="search-panel__actions">
+      <h2 id="search-title" class="visually-hidden">リンクを検索</h2>
+      <label class="visually-hidden" for="searchInput">リンク名・フォルダ・説明文で絞り込む</label>
+      <div class="search-panel__bar">
+        <button id="menuButton" class="menu-button" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="actionMenu">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+        <input
+          id="searchInput"
+          class="search-panel__input"
+          type="search"
+          placeholder="例: ChatGPT、農業、天気、銀行"
+          autocomplete="off"
+        >
+      </div>
+      <div id="actionMenu" class="search-panel__actions" hidden>
         <button id="showFormButton" class="button button--primary" type="button">リンクを追加</button>
         <button id="editModeButton" class="button button--secondary" type="button" aria-pressed="false">並び替え</button>
         <button id="exportButton" class="button button--secondary" type="button">エクスポート</button>
         <button id="importButton" class="button button--secondary" type="button">インポート</button>
-        <button id="resetButton" class="button button--secondary" type="button">保存データをリセット</button>
       </div>
       <input id="importFileInput" class="visually-hidden" type="file" accept="application/json,.json">
       <p id="backupMessage" class="backup-message" role="status" aria-live="polite"></p>
     </section>
+
+    <section id="launcherView" class="launcher-view" aria-label="リンク一覧"></section>
+
+    <p id="emptyMessage" class="empty-message" hidden>該当するリンクがありません</p>
 
     <section id="linkFormPanel" class="link-form-panel" aria-labelledby="formTitle" hidden>
       <h2 id="formTitle">リンクを追加</h2>
@@ -50,13 +60,17 @@
           <input id="linkCategory" name="category" type="text" required autocomplete="off" list="folderSuggestions" placeholder="例: AI、仕事、買い物">
           <datalist id="folderSuggestions"></datalist>
         </div>
-        <div class="form-field">
+        <div class="form-field form-field--full">
           <label for="linkDescription">説明</label>
           <textarea id="linkDescription" name="description" rows="3" placeholder="どんな用途で使うリンクかを書きます"></textarea>
         </div>
         <div class="form-field">
           <label for="linkIcon">アイコン</label>
           <input id="linkIcon" name="icon" type="text" maxlength="4" autocomplete="off" placeholder="例: 🤖、G、AI">
+        </div>
+        <div class="form-field">
+          <label for="linkIconUrl">アイコン画像URL</label>
+          <input id="linkIconUrl" name="iconUrl" type="text" inputmode="url" autocomplete="url" placeholder="https://example.com/icon.png">
         </div>
         <p id="formMessage" class="form-message" role="status" aria-live="polite"></p>
         <div class="link-form__actions">
@@ -65,12 +79,8 @@
         </div>
       </form>
     </section>
-
-    <p id="emptyMessage" class="empty-message" hidden>該当するリンクがありません</p>
-
-    <section id="launcherView" class="launcher-view" aria-label="リンク一覧"></section>
   </main>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=home-screen-v9"></script>
 </body>
 </html>
