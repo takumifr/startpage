@@ -275,6 +275,28 @@ h2 { margin: 0; }
   font-weight: 800;
 }
 
+.form-field--checkbox {
+  align-content: end;
+}
+
+.form-field--checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid rgba(100, 116, 139, 0.24);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.form-field--checkbox input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  accent-color: var(--primary);
+}
+
 .form-field textarea {
   resize: vertical;
   line-height: 1.5;
@@ -350,12 +372,33 @@ h2 { margin: 0; }
 }
 
 .app-icon__mark.has-image {
+  justify-self: stretch;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
   background: rgba(255, 255, 255, 0.82);
+}
+
+.app-icon__fallback,
+.folder-preview__fallback {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.app-icon__mark.has-image .app-icon__fallback,
+.folder-preview__mini.has-image .folder-preview__fallback {
+  display: none;
 }
 
 .app-icon__image {
   position: absolute;
   inset: 0;
+  z-index: 2;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -408,9 +451,11 @@ h2 { margin: 0; }
 .folder-preview__image {
   position: absolute;
   inset: 0;
+  z-index: 2;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: inherit;
   opacity: 0;
 }
 
@@ -475,7 +520,7 @@ h2 { margin: 0; }
 }
 
 .launcher-item.is-editing .launcher-item__actions,
-.launcher-item.is-editing > .reorder-buttons {
+.launcher-item.is-editing .reorder-buttons {
   display: flex;
 }
 
@@ -514,6 +559,29 @@ h2 { margin: 0; }
   color: #fff;
 }
 
+.folder-title {
+  cursor: text;
+  user-select: none;
+}
+
+.folder-title-input {
+  width: min(100%, 320px);
+  min-height: 46px;
+  padding: 8px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  border-radius: 14px;
+  color: #111827;
+  background: rgba(255, 255, 255, 0.94);
+  font-size: 1.12rem;
+  font-weight: 900;
+  text-align: center;
+  outline: none;
+}
+
+.folder-title-input:focus {
+  box-shadow: 0 0 0 4px rgba(147, 197, 253, 0.22);
+}
+
 .folder-stage {
   display: grid;
   min-height: 58vh;
@@ -522,7 +590,7 @@ h2 { margin: 0; }
 }
 
 .folder-panel {
-  width: min(560px, 100%);
+  width: min(560px, calc(100% - 32px));
   margin: 0 auto;
   padding: 18px 12px 24px;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -631,7 +699,7 @@ h2 { margin: 0; }
   }
 
   .folder-panel {
-    width: min(720px, 100%);
+    width: min(720px, calc(100% - 32px));
     padding: 24px 18px 30px;
   }
 }

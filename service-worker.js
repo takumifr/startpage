@@ -1,9 +1,10 @@
-const CACHE_NAME = "startpage-v7-static-v6";
+const CACHE_NAME = "startpage-v8-home-screen-v1";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
-  "./style.css?v=home-screen-v10",
-  "./script.js?v=home-screen-v10",
+  "./style.css?v=home-screen-v12",
+  "./script.js?v=home-screen-v12",
+  "./home-screen-patch.js?v=home-screen-v2",
   "./manifest.webmanifest",
   "./icon.svg"
 ];
