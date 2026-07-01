@@ -8,7 +8,7 @@
   <title>Startpage Launcher</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=home-screen-v10">
+  <link rel="stylesheet" href="style.css?v=home-screen-v12">
 </head>
 <body>
   <main class="page">
@@ -60,6 +60,12 @@
           <input id="linkCategory" name="category" type="text" required autocomplete="off" list="folderSuggestions" placeholder="例: AI、仕事、買い物">
           <datalist id="folderSuggestions"></datalist>
         </div>
+        <div class="form-field form-field--checkbox">
+          <label for="linkShowOnHome">
+            <input id="linkShowOnHome" name="showOnHome" type="checkbox">
+            ホーム画面にも置く
+          </label>
+        </div>
         <div class="form-field form-field--full">
           <label for="linkDescription">説明</label>
           <textarea id="linkDescription" name="description" rows="3" placeholder="どんな用途で使うリンクかを書きます"></textarea>
@@ -90,6 +96,7 @@
     </section>
   </main>
 
-  <script src="script.js?v=home-screen-v10"></script>
+  <script src="script.js?v=home-screen-v12"></script>
+  <script src="home-screen-patch.js?v=home-screen-v2"></script>
 </body>
 </html>
