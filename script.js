@@ -327,6 +327,7 @@ const categoryOrder = [
 ];
 const STORAGE_KEY = "startpage-links-v3";
 const FOLDER_ORDER_KEY = "startpage-folder-order-v6";
+const CORRUPT_LINKS_BACKUP_PREFIX = `${STORAGE_KEY}-corrupt-backup`;
 const LONG_PRESS_MS = 600;
 const LONG_PRESS_MOVE_LIMIT = 10;
 const ICON_SOURCE_VALUES = new Set(["auto", "touch", "favicon", "custom"]);
@@ -372,10 +373,23 @@ function loadRawLinks() {
   if (!savedLinks) return copyDefaultLinks();
   try {
     const parsedLinks = JSON.parse(savedLinks);
-    return Array.isArray(parsedLinks) ? parsedLinks : copyDefaultLinks();
-  } catch (error) {
-    console.warn("保存済みリンクの読み込みに失敗しました。初期リンクを表示します。", error);
+    if (Array.isArray(parsedLinks)) return parsedLinks;
+    backupUnreadableLinks(savedLinks, "リンク一覧の形式が配列ではありません。");
     return copyDefaultLinks();
+  } catch (error) {
+    backupUnreadableLinks(savedLinks, "保存済みリンクの読み込みに失敗しました。", error);
+    return copyDefaultLinks();
+  }
+}
+function backupUnreadableLinks(rawValue, message, error) {
+  console.warn(message, error || "");
+  if (!rawValue) return;
+  try {
+    const backupKey = `${CORRUPT_LINKS_BACKUP_PREFIX}-${new Date().toISOString()}`;
+    if (!localStorage.getItem(backupKey)) localStorage.setItem(backupKey, rawValue);
+    console.warn(`読み込めなかった保存データを ${backupKey} に退避しました。`);
+  } catch (backupError) {
+    console.warn("読み込めなかった保存データの退避に失敗しました。", backupError);
   }
 }
 function loadFolderOrder() {
@@ -408,8 +422,18 @@ function normalizeLinks(rawLinks) {
     };
   });
 }
-function saveLinks() { localStorage.setItem(STORAGE_KEY, JSON.stringify(links)); }
-function saveFolderOrder() { folderOrder = mergeFolderOrder(folderOrder); localStorage.setItem(FOLDER_ORDER_KEY, JSON.stringify(folderOrder)); updateFolderSuggestions(); }
+function safeSetLocalStorage(key, value, failureMessage) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error) {
+    console.warn(failureMessage, error);
+    showBackupMessage(`${failureMessage} ブラウザの空き容量やプライベートモード設定を確認してください。`, "error");
+    return false;
+  }
+}
+function saveLinks() { return safeSetLocalStorage(STORAGE_KEY, JSON.stringify(links), "リンク一覧の保存に失敗しました。"); }
+function saveFolderOrder() { folderOrder = mergeFolderOrder(folderOrder); const saved = safeSetLocalStorage(FOLDER_ORDER_KEY, JSON.stringify(folderOrder), "フォルダ順の保存に失敗しました。"); updateFolderSuggestions(); return saved; }
 function persistAll() { normalizeOrders(); saveLinks(); saveFolderOrder(); }
 function normalizeOrders() {
   getFolders().forEach((folder) => getLinksInFolder(folder).forEach((link, index) => { link.order = index; }));
